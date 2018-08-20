@@ -76,6 +76,7 @@ class ChanEvent:
         
     async def finish(self, winning_team_name=None):
         logger.log("ChanEvent: finishing game")
+        self.started = False
         if winning_team_name is None:
             winning_team_name = max(self.scoreboard.items(), key=operator.itemgetter(1))[0]
         final_message = "**WINNER: {} with {} points**\n".format(winning_team_name, self.scoreboard[winning_team_name])
@@ -86,8 +87,9 @@ class ChanEvent:
         
     async def clean(self):
         roles = [role for role in self.server.roles if role.name in self.role_names]
+        futures = []
         members = self.server.members
         for member in members:
-            await self.client.remove_roles(member, *roles)
-        self.started = False
+            futures.append(self.client.remove_roles(member, *roles))
+        asyncio.wait(futures)
         return

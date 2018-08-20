@@ -5,12 +5,14 @@ import sys
 import utils
 import logger
 from chan_event import *
+from on_the_cross import *
 
 client = discord.Client()
 prefix = None
 token = None
 command_table = dict()
 chan_event = None
+on_the_cross = None
     
 def start(token, pre='$'):
     global prefix
@@ -28,6 +30,7 @@ async def soft_fail(channel, err):
 async def on_ready():
     print('Logged in as {}'.format(client.user.name))
     print('User ID: {}'.format(client.user.id))
+    #await client.edit_profile(None, username="Lain")
     
 @client.event
 async def on_message(message):
@@ -74,16 +77,51 @@ async def suicide(message):
     await client.logout()
     
 @command
-async def chanevent(message):
+async def echo(message):
+    await client.send_message(message.channel, "{}: {}".format(message.author, " ".join(message.content.split()[1:])))
+
+@command
+async def degeneratestart(message):
     if not utils.message_is_from_admin(message):
         await client.send_message(message.channel, "This command can only be used by an admin")
         return
-        
+    global on_the_cross
+    on_the_cross = OnTheCross(3)
+    await client.send_message(message.channel, "Getting the cross")
+    return
+
+@command
+async def degenerate(message):
+    on_the_cross.process_vote(message)
+    return
+    
+@command
+async def degeneratescore(message):
+    scores = on_the_cross.show_scoreboard()
+    await client.send_message(message.channel, scores)
+    return
+
+@command
+async def degeneratefinish(message):
+    global on_the_cross
+    if not utils.message_is_from_admin(message):
+        await client.send_message(message.channel, "This command can only be used by an admin")
+        return
+    final_msg = on_the_cross.finish()
+    on_the_cross = None
+    await client.send_message(message.channel, final_msg)
+    return
+    
+@command
+async def chanevent(message):    
     if len(message.content.split()) < 2:
         await client.send_message(message.channel, "This command requires arguments")
         return
         
     if message.content.split()[1].lower() == "init":
+        if not utils.message_is_from_admin(message):
+            await client.send_message(message.channel, "This command can only be used by an admin")
+            return
         await client.send_message(message.channel, "Initalizing")
         role_names = message.content.split()[2:]
         if role_names == []:
@@ -100,6 +138,9 @@ async def chanevent(message):
         return
             
     elif message.content.split()[1].lower() == "goal":
+        if not utils.message_is_from_admin(message):
+            await client.send_message(message.channel, "This command can only be used by an admin")
+            return
         if chan_event is not None:
             try:
                 await chan_event.set_goal(message.content.split()[-1])
@@ -112,6 +153,9 @@ async def chanevent(message):
         return
         
     if message.content.split()[-1].lower() == "start":
+        if not utils.message_is_from_admin(message):
+            await client.send_message(message.channel, "This command can only be used by an admin")
+            return
         if chan_event is not None:
             try:
                 await chan_event.start()
@@ -138,6 +182,9 @@ async def chanevent(message):
         return
         
     if message.content.split()[-1].lower() == "finish":
+        if not utils.message_is_from_admin(message):
+            await client.send_message(message.channel, "This command can only be used by an admin")
+            return
         if chan_event is not None and chan_event.started == True:
             try:
                 winner_msg = await chan_event.finish()
